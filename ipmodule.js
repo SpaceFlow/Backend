@@ -6,6 +6,7 @@ var ioclient = require("socket.io-client")(loadserveradress),
     request = require("request"),
     util = require("util"),
     express = require("request"),
+    fs = require("fs"),
     poolcache = {};
 var http = require('http');
 var express = require('express');
@@ -17,8 +18,19 @@ Array.prototype.unset = function(value) {
 var mytask = null,
     myid = NaN;
 var pools = {};
-
+if (fs.statsSync(__dirname + "/poolcache.json").isFile()) {
+	pools = JSON.parse(fs.readFileSync("./poolcache.json"))
+} else {
+	fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
+}
 module.exports = {
+	getAdress: function(pool) {
+		if (pools[pool] == undefined) {
+			return null;
+		} else {
+			return pools[pool][Math.floor(Math.random()*pools[pool].length)]
+		}
+	},
 	pools: function() {
 		// Gibt Array mit allen aktiven IPs zurück
 		// Client kann daraus nen runden Robin bauen
@@ -76,6 +88,7 @@ module.exports = {
 		        util.log("Done!");
 		        ioclient.on("poolupdate", function(data) {
 		            pools = JSON.parse(data);
+		            fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
 		            util.log("Parsed new Pool JSON");
 		        })
 		        
@@ -101,6 +114,7 @@ module.exports = {
   		if (!error && response.statusCode == 200) {
     	console.log("Pool request successfull: " + body);
     	pools = JSON.parse(body);
+    	fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
     	callback();
     }
 })
