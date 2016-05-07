@@ -18,7 +18,7 @@ Array.prototype.unset = function(value) {
 var mytask = null,
     myid = NaN;
 var pools = {};
-if (fs.statsSync(__dirname + "/poolcache.json").isFile()) {
+if (fs.statSync(__dirname + "/poolcache.json").isFile()) {
 	pools = JSON.parse(fs.readFileSync("./poolcache.json"))
 } else {
 	fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
