@@ -18,10 +18,11 @@ Array.prototype.unset = function(value) {
 var mytask = null,
     myid = NaN;
 var pools = {};
-if (fs.statSync(__dirname + "/poolcache.json").isFile()) {
-	pools = JSON.parse(fs.readFileSync("./poolcache.json"))
-} else {
-	fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
+try {
+    fs.accessSync(__dirname + "/poolcache.json", fs.F_OK);
+    pools = JSON.parse(fs.readFileSync("./poolcache.json"))
+} catch (e) {
+    fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
 }
 module.exports = {
 	getAdress: function(pool) {
