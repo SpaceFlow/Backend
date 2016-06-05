@@ -28,12 +28,14 @@ var streamfunctions = {
 };
 module.exports = {
 	getAdress: function(pool) {
+        // get random address from pool
 		if (pools[pool] == undefined) {
 			return null;
 		} else {
 			return pools[pool][Math.floor(Math.random()*pools[pool].length)]
 		}
 	},
+
 	pools: function() {
 		// Gibt Array mit allen aktiven IPs zurück
 		// Client kann daraus nen runden Robin bauen
@@ -48,13 +50,20 @@ module.exports = {
 		}
 	},
 	streamRegister: function (id, func) {
+        // registers new stream function
+        // whenever /input/:id: is called
+        // func will be triggered with the POST body as parameter
 		streamfunctions[id] = func;
 		return true;
 	},
 	init: function() {
+        // init this module!
+        // note: task has to be set before init
+        // if not, the node will be assigned to the "undefined" pool
 		if (mytask == null) {
 			util.log("Note: Registering with undefined task")
 		}
+        // start local webserver
 		var app = express();
 		var server = http.createServer(app).listen();
 		app.set('port', server.address().port);
@@ -65,6 +74,7 @@ module.exports = {
 		    job: mytask
 		}));
 		var pinging = true;
+        // start pinging the index server
 		setInterval(function() {
 		    
 		    if (pinging) {
@@ -76,6 +86,8 @@ module.exports = {
 		    }
 		}, 1000);
 		util.log("Connected!");
+        // le ping function
+        // loadbalancer can control this node
 		ioclient.on("message", function(data) {
 		    var parseddata = JSON.parse(data);
 		    console.log(parseddata);
@@ -85,8 +97,11 @@ module.exports = {
 		        util.log("FeelsBadMan");
 		        process.exit(1);
 		    }
+
 		});
 		ioclient.on("task", function(data) {
+            // init this shit
+            // got task!
 		    var parsedtask = JSON.parse(data);
 		    mytask = parsedtask.job;
 		    myid = parsedtask.id;
@@ -105,11 +120,14 @@ module.exports = {
 		        
 		    })
 		});
-		app.get('/', function(req, res) { 
-		    res.end(JSON.stringify(pools))
+		app.get('/', function(req, res) {
+            // every node can dump a load!
+		    res.end(JSON.stringify(pools));
 		    
 		});
 		app.post("/input/:stream", function(req, res) {
+            // inbound POST stream
+            // functions and events can be set above
 			if (streamfunctions[req.params.stream] !== undefined) {
 				streamfunctions[req.params.stream](req.body);
 				res.end("ok");
@@ -117,6 +135,7 @@ module.exports = {
 				res.end("500 does not exist");
 			}
 		});
+        // debug dis shit
 		process.stdin.setEncoding('utf8');
 		process.stdin.on('readable', function() {
 		    var chunk = process.stdin.read();
@@ -126,6 +145,7 @@ module.exports = {
 		});
 	},
 	getPools: function getPools(callback) {
+        // get pools from loadserver and cache to local poolcache.json
     request(loadserveradress, function (error, response, body) {
   		if (!error && response.statusCode == 200) {
     	console.log("Pool request successfull: " + body);
