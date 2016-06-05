@@ -5,7 +5,6 @@ var loadserveradress = "http://localhost:8081";
 var ioclient = require("socket.io-client")(loadserveradress),
     request = require("request"),
     util = require("util"),
-    express = require("request"),
     fs = require("fs"),
     poolcache = {};
 var http = require('http');
@@ -24,6 +23,9 @@ try {
 } catch (e) {
     fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
 }
+var streamfunctions = {
+
+};
 module.exports = {
 	getAdress: function(pool) {
 		if (pools[pool] == undefined) {
@@ -37,12 +39,17 @@ module.exports = {
 		// Client kann daraus nen runden Robin bauen
 		return pools;
 	},
+
 	setTask: function(taskname) {
 		// Muss vor Initierung aufgerufen werden
 		// Setzt Rolle des Client
 		if (taskname !== undefined) {
 			return (mytask = taskname);
 		}
+	},
+	streamRegister: function (id, func) {
+		streamfunctions[id] = func;
+		return true;
 	},
 	init: function() {
 		if (mytask == null) {
@@ -78,9 +85,9 @@ module.exports = {
 		        util.log("FeelsBadMan");
 		        process.exit(1);
 		    }
-		})
+		});
 		ioclient.on("task", function(data) {
-		    var parsedtask = JSON.parse(data)
+		    var parsedtask = JSON.parse(data);
 		    mytask = parsedtask.job;
 		    myid = parsedtask.id;
 		    util.log("I AM " + myid + ". MY TASK IS " + mytask);
@@ -102,6 +109,14 @@ module.exports = {
 		    res.end(JSON.stringify(pools))
 		    
 		});
+		app.post("/input/:stream", function(req, res) {
+			if (streamfunctions[req.params.stream] !== undefined) {
+				streamfunctions[req.params.stream](req.body);
+				res.end("ok");
+			} else {
+				res.end("500 does not exist");
+			}
+		});
 		process.stdin.setEncoding('utf8');
 		process.stdin.on('readable', function() {
 		    var chunk = process.stdin.read();
@@ -120,4 +135,4 @@ module.exports = {
     }
 })
 }
-}
+};
