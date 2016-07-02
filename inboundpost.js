@@ -16,5 +16,9 @@ if (cluster.isMaster) {
 } else {
     console.log("I'm online °O°/");
     infrastructure.setTask("inpost");
-    infrastructure.init();
+    infrastructure.init(function () {
+        // Startup successful. Let's start doing our work!
+        console.log("Successfully registered");
+        
+    });
 }

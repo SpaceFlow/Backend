@@ -56,7 +56,7 @@ module.exports = {
 		streamfunctions[id] = func;
 		return true;
 	},
-	init: function() {
+	init: function(cb) {
         // init this module!
         // note: task has to be set before init
         // if not, the node will be assigned to the "undefined" pool
@@ -109,6 +109,7 @@ module.exports = {
 		    module.exports.getPools(function() {
 		        // Fertig initialisiert!
 		        util.log("Done!");
+				cb();
 		        ioclient.on("poolupdate", function(data) {
 		            pools = JSON.parse(data);
 		            fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
