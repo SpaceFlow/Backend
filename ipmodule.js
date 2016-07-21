@@ -1,6 +1,6 @@
 // Client Module to connect to the Round Robin Server
 // Author: Kirschn
-var loadserveradress = "http://localhost:8081";
+var loadserveradress = "http://192.168.178.128:8081";
 // CODE:
 var ioclient = require("socket.io-client")(loadserveradress),
     request = require("request"),
