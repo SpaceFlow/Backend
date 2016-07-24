@@ -17,9 +17,13 @@ Array.prototype.unset = function(value) {
 };
 function handler (req, res) {
     res.writeHead(200);
-    res.end(JSON.stringify(pools));
+    res.end(JSON.stringify({
+        "pools": pools,
+        "flags": flags
+    }));
   
 }
+var flags = fs.readFileSync("flags.json");
 var fs = require("fs"),
     util = require("util"),
     pools = {},
@@ -135,6 +139,11 @@ iosocket.on("connection", function(socket) {
                 type: "pool",
                 poolname: parseddata.poolname,
                 adresses: pools[parseddata.poolname]
+            }))
+        } else if (parseddata.type == "requestflags") {
+            socket.send(JSON.stringify({
+                "type": "flags",
+                "flags": JSON.stringify(flags)
             }))
         }
         

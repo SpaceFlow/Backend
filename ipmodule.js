@@ -26,6 +26,9 @@ try {
 var streamfunctions = {
 
 };
+var flags = {
+
+}
 module.exports = {
 	getAdress: function(pool) {
         // get random address from pool
@@ -55,6 +58,16 @@ module.exports = {
         // func will be triggered with the POST body as parameter
 		streamfunctions[id] = func;
 		return true;
+	},
+	getFlag: function(flag) {
+		if (flags[flag] == undefined) {
+			return undefined;
+		} else {
+			return flags[flag];
+		}
+	},
+	getFlags: function() {
+		return flags;
 	},
 	init: function(cb) {
         // init this module!
@@ -96,6 +109,8 @@ module.exports = {
 		        console.log(parseddata);
 		        util.log("FeelsBadMan");
 		        process.exit(1);
+		    } elseif (parseddata.type == "flags") {
+		    	flags = JSON.parse(parseddata.flags);
 		    }
 
 		});
@@ -106,7 +121,7 @@ module.exports = {
 		    mytask = parsedtask.job;
 		    myid = parsedtask.id;
 		    util.log("I AM " + myid + ". MY TASK IS " + mytask);
-		    module.exports.getPools(function() {
+		    module.exports.masterSync(function() {
 		        // Fertig initialisiert!
 		        util.log("Done!");
 				cb();
@@ -115,7 +130,11 @@ module.exports = {
 		            fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
 		            util.log("Parsed new Pool JSON");
 		        })
-		        
+		        ioclient.on("flagupdate", function(data) {
+		            flags = JSON.parse(data);
+		            fs.writeFileSync("./flags.json", JSON.stringify(flags));
+		            util.log("Parsed new Flags JSON");
+		        })
 		        
 		        
 		        
@@ -145,14 +164,16 @@ module.exports = {
 		}
 		});
 	},
-	getPools: function getPools(callback) {
+	masterSync: function (callback) {
         // get pools from loadserver and cache to local poolcache.json
     request(loadserveradress, function (error, response, body) {
   		if (!error && response.statusCode == 200) {
     	console.log("Pool request successfull: " + body);
-    	pools = JSON.parse(body);
+    	pools = JSON.parse(body)["pools"];
+    	flags = JSON.parse(body)["flags"];
     	fs.writeFileSync("./poolcache.json", JSON.stringify(pools));
-    	callback();
+    	fs.writeFileSync("./flags.json", JSON.stringify(flags));
+    	callback(pools, flags);
     }
 })
 }
