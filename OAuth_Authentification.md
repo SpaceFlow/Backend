@@ -11,13 +11,13 @@ For client-based authentification
 
 Will return a OAuth Token in the URL Hash if username and password are supplied in the POST body, otherwise it will return a login mask.
 
-### Auth Code FLow
+### Auth Code Flow
 
 For a server-based authentification
 
 > POST /?app_id=my64characterlongappid&scopes=comma,seperated,list,of,scopes&redirect_uri=http://theuriyousetinyourapplicationconfig.com&response_type=code
 
-Will return a Code in the URL Query (?code=64characterlongcode). Now make this request from your private server - the app_secret should never be visible to users in your application.
+Will return a code in the URL Query (?code=64characterlongcode). Now make this request from your private server - the app_secret should never be visible to users.
 This request will also return a HTML Login Mask if no or wrong user credentials are supplied.
 
 
