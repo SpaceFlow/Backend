@@ -1,0 +1,11 @@
+{
+    "service": {
+        "name": "Content Inbound REST API Webserver",
+        "port": 3001,
+        "tags": ["REST", "API", "Inbound", "Webserver"],
+        "check": {
+            "script": "curl localhost:3001 > /dev/null 2>&1",
+            "interval": "10s"
+        }
+    }
+}
