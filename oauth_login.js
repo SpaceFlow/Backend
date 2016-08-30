@@ -67,7 +67,7 @@ setTimeout(function() {
 					if (req.query.scopes 		!== undefined) {
 					if (req.query.redirect_uri 	!== undefined) {
 					if (req.query.response_type !== undefined) {
-						
+
 						sqlConnection.query("SELECT app_id, app_secret, app_name, redirect_uri FROM oauth_applications WHERE app_id=" + mysql.escape(req.query.app_id) + ";", function(err, results) {
 							if (err) throw err;
 							if (results[0] !== undefined) {
@@ -216,7 +216,7 @@ setTimeout(function() {
 					if (req.query.redirect_uri 	!== undefined) {
 					if (req.query.code 			!== undefined) {
 					if (req.query.code.length	== 64) {
-						sqlConnection.query("SELECT app_id, app_secret, app_name, redirect_uri FROM oauth_applications WHERE app_id=" + mysql.escape(req.query.app_id) + " AND app_secret=" + mysql.escape(req.query.app_secret) + ";", function(err, results) {
+						sqlConnection.query("SELECT app_id, app_secret, app_name, redirect_uri FROM oauth_applications WHERE app_id=" + mysql.escape(req.query.app_id) + " AND app_secret=" + mysql.escape(req.query.app_secret) + " AND redirect_uri=" + mysql.escape(req.query.redirect_uri) + ";", function(err, results) {
 							if (err) throw err;
 							if (results[0] !== undefined) {
 								//App found
@@ -239,7 +239,6 @@ setTimeout(function() {
 								});
 								console.log(query.sql);
 
-								
 							} else {
 								// invalid appid
 								console.log("No SQL results");
@@ -248,7 +247,6 @@ setTimeout(function() {
 								})
 								res.end();
 							}
-							
 						});
 					} else {
 						res.status(401).json({
