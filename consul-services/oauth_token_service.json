@@ -1,0 +1,11 @@
+{
+    "service": {
+        "name": "OAuth Token Output",
+        "port": 3002,
+        "tags": ["REST", "API", "OAuth", "Token"],
+        "check": {
+            "script": "curl localhost:3002 > /dev/null 2>&1",
+            "interval": "10s"
+        }
+    }
+}
