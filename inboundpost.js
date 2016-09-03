@@ -112,7 +112,7 @@ if (cluster.isMaster) {
                   res.status(400);
                   res.write(JSON.stringify({
                     "contribution_id": null,
-                    "error": "AUTHENTIFICATION_HEADER_NOT_PRESENT"
+                    "error": "AUTHORISATION_HEADER_NOT_PRESENT"
                   }));
                   res.end();
                 }
