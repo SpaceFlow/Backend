@@ -3,7 +3,27 @@
  */
 const cluster = require('cluster');
 const numCPUs = require('os').cpus().length;
+var redis = require("redis"),
+    redisClient = redis.createClient();
+var realTimeDecayTime = 250;
+function getRealTimeDecayTime(timerInterval) {
+  setInterval(function() {
+      consul.kv.get('realtime/redis_decay_time', function(err, result) {
+        if (err) throw err;
+        if (result == undefined) {
+          console.log("Couldn't find the Realtime Decay KV Key. (realtime/redis_decay_time)");
+          setTimeout(function() {
+            console.log("Retrying...")
+            process.exit(1);
+          }, 1000)
+        } else {
+          realTimeDecayTime = parseInt(result.Value);
+        }
+  }, timerInterval)
+});
+}
 if (cluster.isMaster) {
+    console.log("Master online");
     // Fork workers.
     for (var i = 0; i < numCPUs; i++) {
         cluster.fork();
@@ -14,6 +34,7 @@ if (cluster.isMaster) {
         cluster.fork();
     });
 } else {
+  console.log("Worker online");
     var consul = require("consul")();
     var mysql = require("mysql");
     // get the MySQL Connection Data
@@ -26,8 +47,9 @@ if (cluster.isMaster) {
           process.exit(1);
         }, 1000)
       } else {
-
-
+        // Initialize Update Loop
+        getRealTimeDecayTime(5000);
+      console.log(JSON.parse(result.Value));
       var sqlAppConnection = mysql.createConnection(JSON.parse(result.Value));
       var express = require('express');
       var bodyParser = require("body-parser")
@@ -75,7 +97,15 @@ if (cluster.isMaster) {
                                   "error": null
                                 }));
                                 res.end();
-                              })
+                                redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], {
+                                  "content": req.body.content,
+                                  "mentioned_users": req.body.mentioned_users,
+                                  "using_app_id": tokenResults[0]["app_id"],
+                                  "by_user": tokenResults[0]["for_user_id"],
+                                  "timestamp": Date.now()
+                                })
+                                redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
+                              });
                             } else {
                               // app_id not found
                               res.status(400);
@@ -122,8 +152,5 @@ if (cluster.isMaster) {
           // Bind to a port
           app.listen(3001);
           console.log('Application running!');
-        }
-    });
-
-    
-}
+        
+    };});}
