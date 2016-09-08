@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	<title>
+	Test Socket.io API
+	</title>
+	<script src="http://localhost:3004/socket.io/socket.io.js"></script>
+	<script type="text/javascript">
+	var socket = io('http://localhost:3004');
+	socket.on("contribution", function(data) {
+		console.log(data);
+	})
+	function subscribeToUser() {
+		console.log("Subbing...");
+		socket.emit("subscribe", document.getElementById("userInput").value);
+
+	}
+	</script>
+	</head>
+	<body>
+	<input type="text" id="userInput" />
+	<input type="button" onclick="subscribeToUser()">
+	</body>
+</html>
