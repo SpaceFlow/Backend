@@ -19,8 +19,8 @@ function getRealTimeDecayTime(timerInterval) {
         } else {
           realTimeDecayTime = parseInt(result.Value);
         }
+        });
   }, timerInterval)
-});
 }
 if (cluster.isMaster) {
     console.log("Master online");
