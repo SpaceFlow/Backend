@@ -30,14 +30,15 @@ if (!sticky.listen(server, 3004)) {
             process.exit(1);
           }, 1000)
         } else {
+
           var io = require('socket.io')(server);
-          var bodyParser = require("body-parser")
           var sqlAppConnection = mysql.createConnection(JSON.parse(result.Value));
           // Create a new Express application
           io.on('connection', function (socket) {
+          	// socket-specific subscribed users list
             var subscribedUsers = [0];
+
             console.log("New Connection, Worker" + cluster.worker.id);
-            socket.emit('news', { hello: 'world' });
             socket.on('subscribe', function (data) {
               console.log("Subscribe Trigger");
               var subscribeTo = data.split(",");
@@ -48,19 +49,39 @@ if (!sticky.listen(server, 3004)) {
                   }
               })
             });
+            socket.on('unsubscribe', function (data) {
+               // parse incoming list (?)
+               // if no list is provided it will convert the string into an array so the logic below works
+               // so fuck off
+              var subscribeTo = data.split(",");
+
+              // aaand loop through the generated array, check if is in index and remove the element from subscribed users
+              subscribeTo.forEach(function(currentUser) {
+                  if (parseInt(currentUser) !== NaN) {
+                  	  var index = subscribedUsers.indexOf(currentUser);
+                      if (index !== -1) {
+                      	subscribedUsers.splice(index, 1);
+                      }
+                  }
+              })
+            });
+
+
             newContributionEmitter.on('cont', function(contr) {
-              console.log(cluster.worker.id + " |Recieved Contribuiton Emitter");
-              console.log(subscribedUsers.indexOf(parseInt(contr["by_user"])));
+
+            	// parsing of contribution emitters
+            	// parse json parameters
+
+              contr["using_app"] = JSON.parse(contr["using_app"]);
+              contr["by_user"] = JSON.parse(contr["by_user"]);
+
               // check if the user is subscribed to the user who send the contribution
-              console.log("Subscribed Users: " + typeof subscribedUsers[1]);
-              console.log(typeof parseInt(contr["by_user"]));
-              console.log(subscribedUsers.indexOf(1));
-              if (subscribedUsers.indexOf(parseInt(contr["by_user"])) !== -1) {
+              if (subscribedUsers.indexOf(parseInt(contr["by_user"]["id"])) !== -1) {
                   // weey, the user is subscribed to the user who send this
                   console.log(cluster.worker.id + " |****Emitting Socket.IO trigger");
                   socket.emit("contribution", JSON.stringify(contr));
               } else {
-                  console.log(cluster.worker.id + " | User not subscribed to this user");
+              	// User not subscribed. Do nothing. furNOPE
               }
             })
           });

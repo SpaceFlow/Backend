@@ -97,14 +97,28 @@ if (cluster.isMaster) {
                                   "error": null
                                 }));
                                 res.end();
-                                redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], {
-                                  "content": req.body.content,
-                                  "mentioned_users": req.body.mentioned_users,
-                                  "using_app_id": tokenResults[0]["app_id"],
-                                  "by_user": tokenResults[0]["for_user_id"],
-                                  "timestamp": Date.now()
+                                sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, userResults) {
+                                  if (err) throw err;
+                                  if (userResults[0] == undefined) {
+                                    userResults[0] = {
+                                      "username": "unknown",
+                                      "screen_name": "Unknown User",
+                                      "profile_image_url": "",
+                                      "bio": "This user couldn't be found"
+                                    }
+                                  }
+                                  userResults[0]["id"] = tokenResults[0]["for_user_id"];
+                                  redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], {
+                                    "content": req.body.content,
+                                    "mentioned_users": req.body.mentioned_users,
+                                    "using_app": JSON.stringify({
+                                      "id": tokenResults[0]["app_id"], 
+                                      "app_name": applicationResults[0]["app_name"]}),
+                                    "by_user": JSON.stringify(userResults[0]),
+                                    "timestamp": Date.now()
+                                  })
+                                  redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
                                 })
-                                redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
                               });
                             } else {
                               // app_id not found
