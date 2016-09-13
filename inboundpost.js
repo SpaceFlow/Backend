@@ -162,6 +162,96 @@ if (cluster.isMaster) {
                 }
               }
           });
+          app.post("/contribution/repost" function(req, res) {
+                if (req.get("Authorization") !== undefined) {
+                  var authHeader = req.get("Authorization").split(" ");
+                  if (authHeader[1] !== undefined) {
+                    if (authHeader[1].length == 64 && authHeader[0] == "OAuth") {
+                      if (req.body.content == undefined || req.body.content == "") {
+                        return res.status(400).json({"contribution_id": 0, "error": "MISSING_CONTENT"});
+                      }
+                      if (req.body.content.length > 200) {
+                        return res.status(400).json({"contribution_id": 0, "error": "CONTENT_TOO_LONG"});
+                      }
+                      if (req.body.mentioned_users == undefined) {
+                          req.body.mentioned_users = "";
+                      }
+                      var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
+                      sqlAppConnection.query(sql, [authHeader[1]], function (err, tokenResults) {
+                        if (err) throw err;
+                        if (tokenResults[0] !== undefined) {
+
+                          // validate contribution id
+                          // request parameters in order to build the streaming response
+                          sqlAppConnection.query("SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0", [req.body.contribution_id], function(err, contributionResults) {
+                            if (err) throw err;
+
+
+                            var sqlInsetValues = {
+                              by_user: tokenResults[0]["for_user_id"],
+                              content: req.body.contribution_id,
+                              using_app_id: tokenResults[0]["app_id"],
+                              repost: true
+                            };
+                            var sql = "INSERT INTO posts SET ?";
+
+
+                            sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
+                              if (err) throw err;
+
+
+                              res.status(200);
+                              res.write(JSON.stringify({
+                                "contribution_id": insertResults.insertId,
+                                "error": null
+                              }));
+                              res.end();
+
+                              sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", [tokenResults[0]["for_user_id"]], function(err, userResults) {
+                                if (err) throw err;
+                                sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHRE id = ?", contributionResults[0]["by_user"], function(err, repostedUserResults) {
+                                if (err) throw err;
+
+                                if (userResults[0] == undefined) {
+                                  userResults[0] = {
+                                    "username": "unknown",
+                                    "screen_name": "Unknown User",
+                                    "profile_image_url": "",
+                                    "bio": "This user couldn't be found"
+                                  }
+                                }
+                                if (repostedUserResults[0] == undefined) {
+                                  repostedUserResults[0] = {
+                                    "username": "unknown",
+                                    "screen_name": "Unknown User",
+                                    "profile_image_url": "",
+                                    "bio": "This user couldn't be found"
+                                  }
+                                }
+                                userResults[0]["id"] = tokenResults[0]["for_user_id"];
+                                redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], {
+                                  "repost": true,
+                                  "content": contributionResults[0].content,
+                                  "mentioned_users": contributionResults[0].mentioned_users,
+                                  "using_app": JSON.stringify({
+                                    "id": tokenResults[0]["app_id"], 
+                                    "app_name": applicationResults[0]["app_name"]}),
+                                  "by_user": JSON.stringify(repostedUserResults[0]),
+                                  "repost_by_user": JSON.stringify(userResults[0]),
+                                  "timestamp": contributionResults[0]["timestamp"]
+                                })
+                                redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
+                                })
+                              })
+                            })
+                          })
+                        }
+
+                      });
+                    }
+                  }
+                }
+          });
 
           // Bind to a port
           app.listen(3001);
