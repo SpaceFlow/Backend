@@ -91,12 +91,6 @@ if (cluster.isMaster) {
                               var sql = "INSERT INTO posts SET ?";
                               sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                                 if (err) throw err;
-                                res.status(200);
-                                res.write(JSON.stringify({
-                                  "contribution_id": insertResults.insertId,
-                                  "error": null
-                                }));
-                                res.end();
                                 sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, userResults) {
                                   if (err) throw err;
                                   if (userResults[0] == undefined) {
@@ -108,16 +102,23 @@ if (cluster.isMaster) {
                                     }
                                   }
                                   userResults[0]["id"] = tokenResults[0]["for_user_id"];
-                                  redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], {
+                                  var contributionObject = {
+                                    "repost": false,
                                     "content": req.body.content,
                                     "mentioned_users": req.body.mentioned_users,
                                     "using_app": JSON.stringify({
                                       "id": tokenResults[0]["app_id"], 
                                       "app_name": applicationResults[0]["app_name"]}),
                                     "by_user": JSON.stringify(userResults[0]),
-                                    "timestamp": Date.now()
-                                  })
+                                    "timestamp": Date.now(),
+                                    "contribution_id": insertResults.insertId,
+                                    "error": null
+                                  };
+                                  redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject)
                                   redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
+                                  res.status(200);
+                                  res.write(JSON.stringify(contributionObject));
+                                  res.end();
                                 })
                               });
                             } else {
@@ -162,24 +163,24 @@ if (cluster.isMaster) {
                 }
               }
           });
-          app.post("/contribution/repost" function(req, res) {
+          app.post("/contribution/repost", function(req, res) {
                 if (req.get("Authorization") !== undefined) {
                   var authHeader = req.get("Authorization").split(" ");
                   if (authHeader[1] !== undefined) {
                     if (authHeader[1].length == 64 && authHeader[0] == "OAuth") {
+
                       if (req.body.content == undefined || req.body.content == "") {
-                        return res.status(400).json({"contribution_id": 0, "error": "MISSING_CONTENT"});
+                        return res.status(400).json({"contribution_id": null, "error": "MISSING_CONTENT"});
                       }
-                      if (req.body.content.length > 200) {
-                        return res.status(400).json({"contribution_id": 0, "error": "CONTENT_TOO_LONG"});
+                      if (parseInt(req.body.contribution_id) == NaN) {
+                        return res.status(400).json({"contribution_id": null, "error": "CONTENT_TOO_LONG"});
                       }
-                      if (req.body.mentioned_users == undefined) {
-                          req.body.mentioned_users = "";
-                      }
+
                       var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
                       sqlAppConnection.query(sql, [authHeader[1]], function (err, tokenResults) {
                         if (err) throw err;
                         if (tokenResults[0] !== undefined) {
+
 
                           // validate contribution id
                           // request parameters in order to build the streaming response
@@ -187,6 +188,7 @@ if (cluster.isMaster) {
                             if (err) throw err;
 
 
+                            // welcome to the SQL hell
                             var sqlInsetValues = {
                               by_user: tokenResults[0]["for_user_id"],
                               content: req.body.contribution_id,
@@ -199,16 +201,9 @@ if (cluster.isMaster) {
                             sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                               if (err) throw err;
 
-
-                              res.status(200);
-                              res.write(JSON.stringify({
-                                "contribution_id": insertResults.insertId,
-                                "error": null
-                              }));
-                              res.end();
-
                               sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", [tokenResults[0]["for_user_id"]], function(err, userResults) {
                                 if (err) throw err;
+
                                 sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHRE id = ?", contributionResults[0]["by_user"], function(err, repostedUserResults) {
                                 if (err) throw err;
 
@@ -229,7 +224,7 @@ if (cluster.isMaster) {
                                   }
                                 }
                                 userResults[0]["id"] = tokenResults[0]["for_user_id"];
-                                redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], {
+                                var contributionObject = {
                                   "repost": true,
                                   "content": contributionResults[0].content,
                                   "mentioned_users": contributionResults[0].mentioned_users,
@@ -238,19 +233,28 @@ if (cluster.isMaster) {
                                     "app_name": applicationResults[0]["app_name"]}),
                                   "by_user": JSON.stringify(repostedUserResults[0]),
                                   "repost_by_user": JSON.stringify(userResults[0]),
-                                  "timestamp": contributionResults[0]["timestamp"]
-                                })
+                                  "timestamp": contributionResults[0]["timestamp"],
+                                  "contribution_id": insertResults.insertId,
+                                  "error": null
+                                }
+                                redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject);
                                 redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
-                                })
-                              })
-                            })
-                          })
+                                res.status(200);
+                                  res.write(JSON.stringify(contributionObject));
+                                  res.end();
+                                });
+                              });
+                            });
+                          });
                         }
 
                       });
                     }
                   }
                 }
+              
+            
+
           });
 
           // Bind to a port
