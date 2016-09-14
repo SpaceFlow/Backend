@@ -17,18 +17,28 @@ if (cluster.isMaster) {
 
 } else {
 //var infrastructure = require("./ipmodule.js");
-var config = JSON.parse(fs.readFileSync("config.json"));
 //infrastructure.setTask("oauth-login");
 //infrastructure.init();
 var fs = require("fs");
 setTimeout(function() {
+		var consul = require("consul")();
+		consul.kv.get('database/mysql_app', function(err, result) {
+			console.log(result);
+		  if (err) throw err;
+		  if (result == undefined) {
+		    console.log("Couldn't find the Database KV Key.");
+		    setTimeout(function() {
+		      console.log("Retrying...")
+		      process.exit(1);
+		    }, 1000)
+		  }
 		//var webserverAdress = infrastructure.getAdress("webserver");
 		var express = require("express");
 		var app = express();
 		var mysql = require("mysql");
 		var bodyParser = require("body-parser");
 		var server = http.createServer(app).listen(3002);
-		var sqlConnection = mysql.createConnection(config.sqlConfig);
+		var sqlConnection = mysql.createConnection(JSON.parse(result.Value));
 		var authserv = express();
 		var sha256 = require("js-sha256");
 		authserv.use(bodyParser.json()); // for parsing application/json
@@ -114,7 +124,7 @@ setTimeout(function() {
 													// Generate Token
 													var token = randomCharacters(64);
 
-													// Prepare SQL Innsert
+													// Prepare SQL Insert
 													var insertValues = {
 														"app_id": results[0]["app_id"],
 														"token": token,
@@ -300,6 +310,6 @@ setTimeout(function() {
 		});
 		app.use("/oauth2", authserv);
 
-
+	});
 }, 1000);
 }
