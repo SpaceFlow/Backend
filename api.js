@@ -299,7 +299,7 @@ if (cluster.isMaster) {
                             offset = intParsed;
                           }
                         }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst" ) AND suspended = 0";
+                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
                           sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, starterUserResults) {
@@ -360,7 +360,7 @@ if (cluster.isMaster) {
                             offset = intParsed;
                           }
                         }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst" ) AND suspended = 0";
+                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
                           sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", for_user_id, function(err, starterUserResults) {
@@ -429,7 +429,7 @@ if (cluster.isMaster) {
                             offset = intParsed;
                           }
                         }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE follows IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst" ) AND suspended = 0";
+                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE follows IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
                           sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, starterUserResults) {
@@ -490,7 +490,7 @@ if (cluster.isMaster) {
                             offset = intParsed;
                           }
                         }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE following IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst" ) AND suspended = 0";
+                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE following IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
                           sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", for_user_id, function(err, starterUserResults) {
