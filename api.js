@@ -49,7 +49,7 @@ if (cluster.isMaster) {
       } else {
         // Initialize Update Loop
         getRealTimeDecayTime(5000);
-      console.log(JSON.parse(result.Value));
+      console.log(JSON.parse(result.Value)); 
       var sqlAppConnection = mysql.createConnection(JSON.parse(result.Value));
       var express = require('express');
       var bodyParser = require("body-parser");
@@ -57,7 +57,7 @@ if (cluster.isMaster) {
           var app = express();
           app.use(bodyParser.json()); // for parsing application/json
           app.use(bodyParser.urlencoded({ extended: true }));
-          app.put('/follow/:user', function (req, res) {
+          app.put('/v1/follow/:user', function (req, res) {
               if (req.get("Authorization") !== undefined && req.params.user !== undefined) {
                 if (parseInt(req.params.user) !== NaN) {
                   var authHeader = req.get("Authorization").split(" ");
@@ -164,7 +164,7 @@ if (cluster.isMaster) {
                 
               }
           });
-          app.put('/unfollow/:user', function (req, res) {
+          app.put('/v1/unfollow/:user', function (req, res) {
               if (req.get("Authorization") !== undefined && req.params.user !== undefined) {
                 if (parseInt(req.params.user) !== NaN) {
                   var authHeader = req.get("Authorization").split(" ");
@@ -271,7 +271,7 @@ if (cluster.isMaster) {
                 
               }
           });
-          app.get("/followinfo/self/followers", function(req, res) {
+          app.get("/v1/followinfo/:user/followers", function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
@@ -282,66 +282,12 @@ if (cluster.isMaster) {
                       if (tokenResults[0] !== undefined) {
                         var limit = 25,
                             offset = 0;
-                            order = "DESC"
-                            from_user = tokenResults[0]["for_user_id"];
-                        if (req.query.limit !== undefined) {
-                          var intParsed = parseInt(req.query.limit);
-                          if (intParsed !== NaN) {
-                            limit = intParsed;
-                          }
+                            order = "DESC";
+                        if (parseInt(req.params.user) == NaN) {
+                          from_user = parseInt(tokenResults[0]["for_user_id"]);
+                        } else {
+                          from_user = parseInt(req.params.user);
                         }
-                        if (req.query.orderby !== undefined) {
-                          newestFirst = (req.query.orderby == "newest") ? "DESC" : "ASC";
-                        }
-                        if (req.query.offset !== undefined) {
-                          var intParsed = parseInt(req.query.offset);
-                          if (intParsed !== NaN) {
-                            offset = intParsed;
-                          }
-                        }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
-                        sqlAppConnection.query(sql, from_user, function (err, followResults) {
-                          if (err) throw err;
-                          sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, starterUserResults) {
-                            if (err) throw err;
-                            if (starterUserResults[0] !== undefined) {
-                              var answerObject = {
-                                "type": "follows",
-                                "results": limit,
-                                "offset": offset,
-                                "order": order,
-                                "user": starterUserResults[0],
-                                "follows": followResults
-                              };
-                              res.send(JSON.stringify(answerObject));
-                              res.end();
-                            }
-                          });
-                        })
-                      } else {
-                        res.status(200).json({
-                            "error": "TOKEN_NOT_FOUND",
-                            "updated": null
-                          });
-                      }
-                    });
-                }
-              }
-            }
-          });
-          app.get("/followinfo/:user/followers", function(req, res) {
-            if (req.get("Authorization") !== undefined) {
-              var authHeader = req.get("Authorization").split(" ");
-              if (authHeader[1] !== undefined) {
-                if (authHeader[1].length == 64 && authHeader[0] == "OAuth") {
-                  var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
-                  sqlAppConnection.query(sql, [authHeader[1]], function (err, tokenResults) {
-                    if (err) throw err;
-                      if (tokenResults[0] !== undefined) {
-                        var limit = 25,
-                            offset = 0;
-                            order = "DESC"
-                            from_user = req.params.user;
                         if (req.query.limit !== undefined) {
                           var intParsed = parseInt(req.query.limit);
                           if (intParsed !== NaN) {
@@ -360,7 +306,8 @@ if (cluster.isMaster) {
                             offset = intParsed;
                           }
                         }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
+                        var sql = "SELECT accounts.id, accounts.username, accounts.screen_name, accounts.profile_image_url, accounts.bio FROM accounts WHERE id IN (SELECT user AS id FROM followings WHERE followings.follows = ?) AND suspended = 0 LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset);
+                        //var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
                           sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", for_user_id, function(err, starterUserResults) {
@@ -401,7 +348,7 @@ if (cluster.isMaster) {
               }
             }
           });
-          app.get("/followinfo/self/followings", function(req, res) {
+          app.get("/v1/followinfo/:user/followings", function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
@@ -412,66 +359,12 @@ if (cluster.isMaster) {
                       if (tokenResults[0] !== undefined) {
                         var limit = 25,
                             offset = 0;
-                            order = "DESC"
-                            from_user = tokenResults[0]["for_user_id"];
-                        if (req.query.limit !== undefined) {
-                          var intParsed = parseInt(req.query.limit);
-                          if (intParsed !== NaN) {
-                            limit = intParsed;
-                          }
-                        }
-                        if (req.query.orderby !== undefined) {
-                          newestFirst = (req.query.orderby == "newest") ? "DESC" : "ASC";
-                        }
-                        if (req.query.offset !== undefined) {
-                          var intParsed = parseInt(req.query.offset);
-                          if (intParsed !== NaN) {
-                            offset = intParsed;
-                          }
-                        }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE follows IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
-                        sqlAppConnection.query(sql, from_user, function (err, followResults) {
-                          if (err) throw err;
-                          sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, starterUserResults) {
-                            if (err) throw err;
-                            if (starterUserResults[0] !== undefined) {
-                              var answerObject = {
-                                "type": "follows",
-                                "results": limit,
-                                "offset": offset,
-                                "order": order,
-                                "user": starterUserResults[0],
-                                "follows": followResults
-                              };
-                              res.send(JSON.stringify(answerObject));
-                              res.end();
+                            newestFirst = "DESC";
+                            if (parseInt(req.params.user) == NaN) {
+                              from_user = parseInt(tokenResults[0]["for_user_id"]);
+                            } else {
+                              from_user = parseInt(req.params.user);
                             }
-                          });
-                        })
-                      } else {
-                        res.status(200).json({
-                            "error": "TOKEN_NOT_FOUND",
-                            "updated": null
-                          });
-                      }
-                    });
-                }
-              }
-            }
-          });
-          app.get("/followinfo/:user/followings", function(req, res) {
-            if (req.get("Authorization") !== undefined) {
-              var authHeader = req.get("Authorization").split(" ");
-              if (authHeader[1] !== undefined) {
-                if (authHeader[1].length == 64 && authHeader[0] == "OAuth") {
-                  var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
-                  sqlAppConnection.query(sql, [authHeader[1]], function (err, tokenResults) {
-                    if (err) throw err;
-                      if (tokenResults[0] !== undefined) {
-                        var limit = 25,
-                            offset = 0;
-                            order = "DESC"
-                            from_user = req.params.user;
                         if (req.query.limit !== undefined) {
                           var intParsed = parseInt(req.query.limit);
                           if (intParsed !== NaN) {
@@ -490,7 +383,8 @@ if (cluster.isMaster) {
                             offset = intParsed;
                           }
                         }
-                        var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE following IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
+                        var sql = "SELECT accounts.id, accounts.username, accounts.screen_name, accounts.profile_image_url, accounts.bio FROM accounts WHERE id IN (SELECT follows AS id FROM followings WHERE followings.user = ?) AND suspended = 0 LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset);
+                        //var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE following IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
                           sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", for_user_id, function(err, starterUserResults) {
@@ -521,7 +415,7 @@ if (cluster.isMaster) {
                           });
                         })
                       } else {
-                        res.status(200).json({
+                        res.status(400).json({
                             "error": "TOKEN_NOT_FOUND",
                             "updated": null
                           });
@@ -531,7 +425,7 @@ if (cluster.isMaster) {
               }
             }
           });
-          app.post("/userinformation/self/update", function(req, res) {
+          app.post("/v1/userinformation/self/update", function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
@@ -578,10 +472,10 @@ if (cluster.isMaster) {
               }
             }
           });
-          app.post("/userinformation/information", function(req, res) {
+          app.get("/v1/user/:userid", function(req, res) {
             if (req.body.user_id !== undefined) {
               var sql = "SELECT id, username, screen_name, profile_image_url, bio, suspended FROM accounts WHERE id = ?";
-              var getquery = sqlAppConnection.query(sql, req.body.user_id, function(err, results) {
+              var getquery = sqlAppConnection.query(sql, req.params., function(err, results) {
                 if (err) throw err;
                 if (results[0] == undefined) {
                   return res.json({"error": "USER_ID_NOT_FOUND", "results": null}).end();
@@ -591,7 +485,7 @@ if (cluster.isMaster) {
               })
             }
           });
-          app.post('/contribution', function (req, res) {
+          app.post('/v1/contribution', function (req, res) {
               if (req.get("Authorization") !== undefined) {
                 var authHeader = req.get("Authorization").split(" ");
                 if (authHeader[1] !== undefined) {
@@ -696,7 +590,7 @@ if (cluster.isMaster) {
                 }
               }
           });
-          app.post("/contribution/repost", function(req, res) {
+          app.post("/v1/contribution/repost", function(req, res) {
                 if (req.get("Authorization") !== undefined) {
                   var authHeader = req.get("Authorization").split(" ");
                   if (authHeader[1] !== undefined) {
@@ -706,79 +600,80 @@ if (cluster.isMaster) {
                         return res.status(400).json({"contribution_id": null, "error": "MISSING_CONTENT"});
                       }
                       if (parseInt(req.body.contribution_id) == NaN) {
-                        return res.status(400).json({"contribution_id": null, "error": "CONTENT_TOO_LONG"});
+                        return res.status(400).json({"contribution_id": null, "error": "CONTRIBUTION_ID_NOT_SET"});
                       }
 
                       var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
                       sqlAppConnection.query(sql, [authHeader[1]], function (err, tokenResults) {
                         if (err) throw err;
                         if (tokenResults[0] !== undefined) {
+                          if (tokenResults[0]["scopes"].split(",").indexOf("post_for_user")) {
 
-
-                          // validate contribution id
-                          // request parameters in order to build the streaming response
-                          sqlAppConnection.query("SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0", [req.body.contribution_id], function(err, contributionResults) {
-                            if (err) throw err;
-
-
-                            // welcome to the SQL hell
-                            var sqlInsetValues = {
-                              by_user: tokenResults[0]["for_user_id"],
-                              content: req.body.contribution_id,
-                              using_app_id: tokenResults[0]["app_id"],
-                              repost: true
-                            };
-                            var sql = "INSERT INTO posts SET ?";
-
-
-                            sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
+                            // validate contribution id
+                            // request parameters in order to build the streaming response
+                            sqlAppConnection.query("SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0", [req.body.contribution_id], function(err, contributionResults) {
                               if (err) throw err;
 
-                              sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", [tokenResults[0]["for_user_id"]], function(err, userResults) {
+
+                              // welcome to the SQL hell
+                              var sqlInsetValues = {
+                                by_user: tokenResults[0]["for_user_id"],
+                                content: req.body.contribution_id,
+                                using_app_id: tokenResults[0]["app_id"],
+                                repost: true
+                              };
+                              var sql = "INSERT INTO posts SET ?";
+
+
+                              sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                                 if (err) throw err;
 
-                                sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHRE id = ?", contributionResults[0]["by_user"], function(err, repostedUserResults) {
-                                if (err) throw err;
+                                sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", [tokenResults[0]["for_user_id"]], function(err, userResults) {
+                                  if (err) throw err;
 
-                                if (userResults[0] == undefined) {
-                                  userResults[0] = {
-                                    "username": "unknown",
-                                    "screen_name": "Unknown User",
-                                    "profile_image_url": "",
-                                    "bio": "This user couldn't be found"
+                                  sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHRE id = ?", contributionResults[0]["by_user"], function(err, repostedUserResults) {
+                                  if (err) throw err;
+
+                                  if (userResults[0] == undefined) {
+                                    userResults[0] = {
+                                      "username": "unknown",
+                                      "screen_name": "Unknown User",
+                                      "profile_image_url": "",
+                                      "bio": "This user couldn't be found"
+                                    }
                                   }
-                                }
-                                if (repostedUserResults[0] == undefined) {
-                                  repostedUserResults[0] = {
-                                    "username": "unknown",
-                                    "screen_name": "Unknown User",
-                                    "profile_image_url": "",
-                                    "bio": "This user couldn't be found"
+                                  if (repostedUserResults[0] == undefined) {
+                                    repostedUserResults[0] = {
+                                      "username": "unknown",
+                                      "screen_name": "Unknown User",
+                                      "profile_image_url": "",
+                                      "bio": "This user couldn't be found"
+                                    }
                                   }
-                                }
-                                userResults[0]["id"] = tokenResults[0]["for_user_id"];
-                                var contributionObject = {
-                                  "repost": true,
-                                  "content": contributionResults[0].content,
-                                  "mentioned_users": contributionResults[0].mentioned_users,
-                                  "using_app": JSON.stringify({
-                                    "id": tokenResults[0]["app_id"], 
-                                    "app_name": applicationResults[0]["app_name"]}),
-                                  "by_user": JSON.stringify(repostedUserResults[0]),
-                                  "repost_by_user": JSON.stringify(userResults[0]),
-                                  "timestamp": contributionResults[0]["timestamp"],
-                                  "contribution_id": insertResults.insertId,
-                                  "error": null
-                                }
-                                redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject);
-                                redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
-                                res.status(200);
-                                  res.write(JSON.stringify(contributionObject));
-                                  res.end();
+                                  userResults[0]["id"] = tokenResults[0]["for_user_id"];
+                                  var contributionObject = {
+                                    "repost": true,
+                                    "content": contributionResults[0].content,
+                                    "mentioned_users": contributionResults[0].mentioned_users,
+                                    "using_app": JSON.stringify({
+                                      "id": tokenResults[0]["app_id"], 
+                                      "app_name": applicationResults[0]["app_name"]}),
+                                    "by_user": JSON.stringify(repostedUserResults[0]),
+                                    "repost_by_user": JSON.stringify(userResults[0]),
+                                    "timestamp": contributionResults[0]["timestamp"],
+                                    "contribution_id": insertResults.insertId,
+                                    "error": null
+                                  }
+                                  redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject);
+                                  redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
+                                  res.status(200);
+                                    res.write(JSON.stringify(contributionObject));
+                                    res.end();
+                                  });
                                 });
                               });
                             });
-                          });
+                          }
                         }
 
                       });
