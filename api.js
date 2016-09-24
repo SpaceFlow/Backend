@@ -805,7 +805,7 @@ if (cluster.isMaster) {
                 }
               
             }
-          })
+          )
           app.get('/v1/contributions/:user', function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
@@ -888,7 +888,7 @@ if (cluster.isMaster) {
                 }
               
             }
-          })
+          )
 
 
           app.get('*', function(req, res) {
