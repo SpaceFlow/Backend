@@ -723,8 +723,172 @@ if (cluster.isMaster) {
             });
 
           })
+          app.get('/v1/contributions/timeline', function(req, res) {
+            if (req.get("Authorization") !== undefined) {
+              var authHeader = req.get("Authorization").split(" ");
+              if (authHeader[1] !== undefined) {
+                if (authHeader[1].length == 64 && authHeader[0] == "OAuth") {
 
-          
+
+                  var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
+                  sqlAppConnection.query(sql, [authHeader[1]], function (err, tokenResults) {
+                    if (err) throw err;
+                    if (tokenResults[0] == undefined) {
+                      // lol fuck this shit i'm outta here
+                      return res.status(400).json({
+                        "error": "TOKEN_NOT_FOUND",
+                        "contributions": null
+                      }).end();
+
+                    }
+
+
+                    var limit = 100,
+                        offset = 0;
+                    if (req.query.limit !== undefined) {
+                      var intParsed = parseInt(req.query.limit);
+                      if (intParsed !== NaN) {
+                        if (limit <= 100) {
+                          limit = intParsed;
+                        }
+
+                      }
+                    }
+
+
+
+                    if (req.query.offset !== undefined) {
+                      var intParsed = parseInt(req.query.offset);
+                      if (intParsed !== NaN) {
+                        offset = intParsed;
+                      }
+                    }
+
+
+
+                    var sql = "SELECT posts.by_user, posts.content, posts.timestamp, posts.mentioned_users, accounts.id AS userid, accounts.screen_name, accounts.bio, accounts.profile_image_url FROM posts, accounts WHERE posts.by_user IN (SELECT follows AS id FROM followings WHERE followings.user = ?) AND posts.by_user = accounts.id AND accounts.suspended = 0 ORDER BY posts.timestamp DESC LIMIT " + mysql.escape(limit) + ", " + mysql.escape(offset);
+                    sqlAppConnection.query(sql, tokenResults[0].for_user_id, function(err, results) {
+                      if (err) throw err;
+                      res.status(200).json({
+                        "error": null,
+                        "contributions": results
+                      })
+                    })
+
+
+
+
+                  });
+                }  else {
+                    res.status(400);
+                    res.write(JSON.stringify({
+                       "contributions": null,
+                       "error": "AUTHORISATION_HEADER_NOT_PRESENT"
+                    }));
+                    res.end();
+                  }
+                } else {
+                    res.status(400);
+                    res.write(JSON.stringify({
+                       "contributions": null,
+                       "error": "AUTHORISATION_HEADER_NOT_PRESENT"
+                    }));
+                    res.end();
+                  }
+              } else {
+                res.status(400);
+                  res.write(JSON.stringify({
+                    "contributions": null,
+                    "error": "AUTHORISATION_HEADER_NOT_PRESENT"
+                  }));
+                  res.end();
+                }
+              
+            }
+          })
+          app.get('/v1/contributions/:user', function(req, res) {
+            if (req.get("Authorization") !== undefined) {
+              var authHeader = req.get("Authorization").split(" ");
+              if (authHeader[1] !== undefined) {
+                if (authHeader[1].length == 64 && authHeader[0] == "OAuth") {
+
+
+                  var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
+                  sqlAppConnection.query(sql, [authHeader[1]], function (err, tokenResults) {
+                    if (err) throw err;
+                    if (tokenResults[0] == undefined) {
+                      // lol fuck this shit i'm outta here
+                      return res.status(400).json({
+                        "error": "TOKEN_NOT_FOUND",
+                        "contributions": null
+                      }).end();
+
+                    }
+
+
+                    var limit = 100,
+                        offset = 0;
+                    if (req.query.limit !== undefined) {
+                      var intParsed = parseInt(req.query.limit);
+                      if (intParsed !== NaN) {
+                        if (limit <= 100) {
+                          limit = intParsed;
+                        }
+
+                      }
+                    }
+
+
+
+                    if (req.query.offset !== undefined) {
+                      var intParsed = parseInt(req.query.offset);
+                      if (intParsed !== NaN) {
+                        offset = intParsed;
+                      }
+                    }
+
+
+
+                    var sql = "SELECT posts.by_user, posts.content, posts.timestamp, posts.mentioned_users, accounts.id AS userid, accounts.screen_name, accounts.bio, accounts.profile_image_url FROM posts, accounts WHERE posts.by_user = ? AND posts.by_user = accounts.id AND accounts.suspended = 0 ORDER BY posts.timestamp DESC LIMIT " + mysql.escape(limit) + ", " + mysql.escape(offset);
+                    sqlAppConnection.query(sql, tokenResults[0].for_user_id, function(err, results) {
+                      if (err) throw err;
+                      res.status(200).json({
+                        "error": null,
+                        "contributions": results
+                      })
+                    })
+
+
+
+
+                  });
+                }  else {
+                    res.status(400);
+                    res.write(JSON.stringify({
+                       "contributions": null,
+                       "error": "AUTHORISATION_HEADER_NOT_PRESENT"
+                    }));
+                    res.end();
+                  }
+                } else {
+                    res.status(400);
+                    res.write(JSON.stringify({
+                       "contributions": null,
+                       "error": "AUTHORISATION_HEADER_NOT_PRESENT"
+                    }));
+                    res.end();
+                  }
+              } else {
+                res.status(400);
+                  res.write(JSON.stringify({
+                    "contributions": null,
+                    "error": "AUTHORISATION_HEADER_NOT_PRESENT"
+                  }));
+                  res.end();
+                }
+              
+            }
+          })
 
 
           app.get('*', function(req, res) {
