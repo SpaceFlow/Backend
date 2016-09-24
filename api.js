@@ -686,7 +686,9 @@ if (cluster.isMaster) {
             
 
           });
-
+          app.get('*', function(req, res) {
+            res.status(404).json({"error": "ROUTE_NOT_FOUND", "results": null}).end();
+          })
           // Bind to a port
           app.listen(1337);
           console.log('Application running!');
