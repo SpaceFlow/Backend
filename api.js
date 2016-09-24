@@ -483,6 +483,8 @@ if (cluster.isMaster) {
                 res.json({"error": null, "results": results[0]});
                 res.end();
               })
+            } else {
+              res.status(400).json({"error": "USER_NOT_FOUND", "results": null}).end();
             }
           });
           app.post('/v1/contribution', function (req, res) {
