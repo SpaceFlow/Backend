@@ -473,7 +473,7 @@ if (cluster.isMaster) {
             }
           });
           app.get("/v1/user/:userid", function(req, res) {
-            if (req.body.user_id !== undefined) {
+            if (req.params.user_id !== undefined) {
               var sql = "SELECT id, username, screen_name, profile_image_url, bio, suspended FROM accounts WHERE id = ?";
               var getquery = sqlAppConnection.query(sql, req.params.userid, function(err, results) {
                 if (err) throw err;
