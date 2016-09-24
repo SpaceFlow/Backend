@@ -475,7 +475,7 @@ if (cluster.isMaster) {
           app.get("/v1/user/:userid", function(req, res) {
             if (req.body.user_id !== undefined) {
               var sql = "SELECT id, username, screen_name, profile_image_url, bio, suspended FROM accounts WHERE id = ?";
-              var getquery = sqlAppConnection.query(sql, req.params., function(err, results) {
+              var getquery = sqlAppConnection.query(sql, req.params.userid, function(err, results) {
                 if (err) throw err;
                 if (results[0] == undefined) {
                   return res.json({"error": "USER_ID_NOT_FOUND", "results": null}).end();
@@ -686,7 +686,7 @@ if (cluster.isMaster) {
           });
 
           // Bind to a port
-          app.listen(3005);
+          app.listen(1337);
           console.log('Application running!');
         
     };});}
