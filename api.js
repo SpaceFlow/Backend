@@ -462,7 +462,7 @@ if (cluster.isMaster) {
 
                         })
                       } else {
-                        res.status(200).json({
+                        res.status(400).json({
                             "error": "TOKEN_NOT_FOUND",
                             "updated": null
                           });
@@ -484,7 +484,7 @@ if (cluster.isMaster) {
                 res.end();
               })
             } else {
-              res.status(400).json({"error": "USER_NOT_FOUND", "results": null}).end();
+              res.status(400).json({"error": "USER_ID_NOT_FOUND", "results": null}).end();
             }
           });
           app.post('/v1/contribution', function (req, res) {
@@ -592,17 +592,17 @@ if (cluster.isMaster) {
                 }
               }
           });
-          app.post("/v1/contribution/repost", function(req, res) {
+          app.put("/v1/contribution/repost/:contribution_id", function(req, res) {
                 if (req.get("Authorization") !== undefined) {
                   var authHeader = req.get("Authorization").split(" ");
                   if (authHeader[1] !== undefined) {
                     if (authHeader[1].length == 64 && authHeader[0] == "OAuth") {
 
-                      if (req.body.content == undefined || req.body.content == "") {
-                        return res.status(400).json({"contribution_id": null, "error": "MISSING_CONTENT"});
-                      }
-                      if (parseInt(req.body.contribution_id) == NaN) {
+                      if (req.params.contribution_id == undefined || req.params.contribution_id == "") {
                         return res.status(400).json({"contribution_id": null, "error": "CONTRIBUTION_ID_NOT_SET"});
+                      }
+                      if (parseInt(req.params.contribution_id) == NaN) {
+                        return res.status(400).json({"contribution_id": null, "error": "INVALID_CONTRIBUTION_ID"});
                       }
 
                       var sql = "SELECT app_id, for_user_id, scopes FROM oauth_tokens WHERE token = ?";
@@ -613,14 +613,17 @@ if (cluster.isMaster) {
 
                             // validate contribution id
                             // request parameters in order to build the streaming response
-                            sqlAppConnection.query("SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0", [req.body.contribution_id], function(err, contributionResults) {
-                              if (err) throw err;
+                            sqlAppConnection.query("SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0", [req.params.contribution_id], function(err, contributionResults) {
 
+                              if (err) throw err;
+                              if (contributionResults[0] == undefined) {
+                                return res.status(404).json({"error": "CONTRIBUTION_NOT_FOUND"}).end();
+                              }
 
                               // welcome to the SQL hell
                               var sqlInsetValues = {
                                 by_user: tokenResults[0]["for_user_id"],
-                                content: req.body.contribution_id,
+                                content: req.params.contribution_id,
                                 using_app_id: tokenResults[0]["app_id"],
                                 repost: true
                               };
@@ -686,6 +689,44 @@ if (cluster.isMaster) {
             
 
           });
+
+
+
+          app.get("/v1/contribution/:id", function(req, res) {
+
+            // check params
+
+            if (req.params.id == undefined) {
+              return res.status(404).json({"error": "CONTRIBUTION_NOT_FOUND", "contribution": null}).end();
+            }
+            if (parseInt(req.params.id) == NaN) {
+              return res.status(404).json({"error": "CONTRIBUTION_NOT_FOUND", "contribution": null}).end();
+            }
+
+            // sql query
+            var sql = "SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0";
+            sqlAppConnection.query(sql, req.params.id, function(err, results) {
+              if (err) throw err;
+
+
+              //contribution?
+              if (results[0] == undefined) {
+                  return res.status(404).json({"error": "CONTRIBUTION_NOT_FOUND", "contribution": null}).end();
+              }
+              // wow, build up the object and send it!
+              results[0]["id"] = parseInt(req.params.id);
+              res.status(200).json({
+                "error": null,
+                "status:" results[0]
+              }).end();
+
+            });
+
+          })
+
+          
+
+
           app.get('*', function(req, res) {
             res.status(404).json({"error": "ROUTE_NOT_FOUND", "results": null}).end();
           })
