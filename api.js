@@ -717,7 +717,7 @@ if (cluster.isMaster) {
               results[0]["id"] = parseInt(req.params.id);
               res.status(200).json({
                 "error": null,
-                "status:" results[0]
+                "status": results[0]
               }).end();
 
             });
