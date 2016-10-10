@@ -36,7 +36,7 @@ if (!sticky.listen(server, 3014)) {
           // Create a new Express application
           io.on('connection', function (socket) {
           	var authed = false;
-          	socket.on("authentification" function(authData) {
+          	socket.on("authentification", function(authData) {
           		if (authed == false) {
           			var sql = "SELECT for_user_id FROM oauth_tokens WHERE token = ?";
           			sqlAppConnection.query(sql, authData, function(err, tokenData) {
