@@ -43,12 +43,12 @@ if (!sticky.listen(server, 3014)) {
           			var sql = "SELECT for_user_id FROM oauth_tokens WHERE token = ?";
                 console.log(authData);
                 console.log(typeof authData);
-          			sqlAppConnection.query(sql, authData, function(err, tokenData) {
-                  console.log(err);
+          			sqlAppConnection.query(sql, authData, function(sqlErr, tokenData) {
+                  console.log(sqlErr);
                   console.log(tokenData);
           				if (err) throw err;
           				if (tokenData[0] !== undefined) {
-                    socket.emit("authstatus", JSON.parse({status: true, message: "successful"}));
+                      socket.emit("authstatus", JSON.parse({status: true, message: "successful"}));
                       // socket-specific subscribed users list
                       var subscribedUsers = [0];
 
