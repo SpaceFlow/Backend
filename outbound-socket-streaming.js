@@ -48,7 +48,7 @@ if (!sticky.listen(server, 3014)) {
                   console.log(tokenData);
           				if (err) throw err;
           				if (tokenData[0] !== undefined) {
-                      socket.send("authstatus", JSON.parse({status: true, message: "successful"}));
+                      //socket.send("authstatus", JSON.parse({status: true, message: "successful"}));
                       // socket-specific subscribed users list
                       var subscribedUsers = [0];
 
@@ -59,7 +59,7 @@ if (!sticky.listen(server, 3014)) {
                       // 2 - Notification Stream (JSON based);
                       // 3 - Notification Stream (Channel/JSON based)
                       // 4 - 1 + 3
-
+                      console.log()
                       socket.on("mode", function(data) {
                         data = parseInt(data);
                         if (data !== NaN) {
