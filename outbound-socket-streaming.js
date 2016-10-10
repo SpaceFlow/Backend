@@ -32,9 +32,8 @@ if (!sticky.listen(server, 3014)) {
         } else {
 
           var io = require('socket.io')(server);
-          console.log(result);
           var jsonParsedResult = JSON.parse(result.Value);
-          console.log(jsonParsedResult);
+
           var sqlAppConnection = mysql.createConnection(JSON.parse(result.Value));
           // Create a new Express application
           io.on('connection', function (socket) {
@@ -42,7 +41,11 @@ if (!sticky.listen(server, 3014)) {
           	socket.on("authentification", function(authData) {
           		if (authed == false) {
           			var sql = "SELECT for_user_id FROM oauth_tokens WHERE token = ?";
+                console.log(authData);
+                console.log(typeof authData);
           			sqlAppConnection.query(sql, authData, function(err, tokenData) {
+                  console.log(err);
+                  console.log(tokenData);
           				if (err) throw err;
           				if (tokenData[0] !== undefined) {
                     socket.emit("authstatus", JSON.parse({status: true, message: "successful"}));
