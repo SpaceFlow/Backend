@@ -33,6 +33,8 @@ if (!sticky.listen(server, 3014)) {
 
           var io = require('socket.io')(server);
           console.log(result);
+          var jsonParsedResult = JSON.parse(result.Value);
+          console.log(jsonParsedResult);
           var sqlAppConnection = mysql.createConnection(JSON.parse(result.Value));
           // Create a new Express application
           io.on('connection', function (socket) {
