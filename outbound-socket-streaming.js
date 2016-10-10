@@ -159,19 +159,19 @@ if (!sticky.listen(server, 3014)) {
                             if (subscribedUsers.indexOf(parseInt(contr["by_user"]["id"])) !== -1) {
                                 // weey, the user is subscribed to the user who send this
                                 console.log(cluster.worker.id + " |****Emitting Socket.IO trigger");
-                                socket.emit("contribution", JSON.stringify(contr));
+                                socket.send("contribution", contr);
                             } else {
                               // User not subscribed. Do nothing. furNOPE
                             }
                         }
                       })
           				} else {
-                    socket.emit("authstatus", JSON.parse({status: false, message: "token_not_found"}));
+                    socket.send("authstatus", {status: false, message: "token_not_found"});
           					socket.close();
           				}
           			});
           		} else {
-          		  socket.emit("authstatus", JSON.parse({status: true, message: "already_authed"}));
+          		  socket.send("authstatus", {status: true, message: "already_authed"});
           		}
           	})
           });
