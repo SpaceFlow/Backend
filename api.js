@@ -6,6 +6,7 @@ const numCPUs = require('os').cpus().length;
 var redis = require("redis"),
     redisClient = redis.createClient();
 var realTimeDecayTime = 250;
+var databaseGetters = require("./databaseGetters.js");
 function getRealTimeDecayTime(timerInterval) {
   setInterval(function() {
       consul.kv.get('realtime/redis_decay_time', function(err, result) {
@@ -99,9 +100,9 @@ if (cluster.isMaster) {
                                 var sql = "INSERT INTO follows SET ?";
                                 sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                                   if (err) throw err;
-                                  sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", req.params.user, function(err, starterUserResults) {
+                                  databaseGetters.userFromID(sqlAppConnection, req.params.user, function(err, starterUserResults) {
                                     if (err) throw err;
-                                  sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, targetUserResults) {
+                                  databaseGetters.userFromID(sqlAppConnection, tokenResults[0]["for_user_id"], function(err, targetUserResults) {
                                     if (err) throw err;
                                     if (starterUserResults[0] == undefined) {
                                       starterUserResults[0] = {
@@ -206,9 +207,9 @@ if (cluster.isMaster) {
                                 var sql = "DELETE FROM users WHERE ?";
                                 sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                                   if (err) throw err;
-                                  sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", req.params.user, function(err, starterUserResults) {
+                                  databaseGetters.userFromID(sqlAppConnection, req.params.user, function(err, starterUserResults) {
                                     if (err) throw err;
-                                  sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, targetUserResults) {
+                                  databaseGetters.userFromID(sqlAppConnection, tokenResults[0]["for_user_id"], function(err, targetUserResults) {
                                     if (err) throw err;
                                     if (starterUserResults[0] == undefined) {
                                       starterUserResults[0] = {
@@ -329,7 +330,7 @@ if (cluster.isMaster) {
                         //var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE user IN (SELECT user FROM followings WHERE follows = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
-                          sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", for_user_id, function(err, starterUserResults) {
+                          databaseGetters.userFromID(sqlAppConnection, for_user_id, function(err, starterUserResults) {
                             if (err) throw err;
                             if (starterUserResults[0] !== undefined) {
                               var answerObject = {
@@ -406,7 +407,7 @@ if (cluster.isMaster) {
                         //var sql = "SELECT id, username, screen_name, profile_image_url, bio FROM accounts WHERE following IN (SELECT follows FROM followings WHERE user = ? LIMIT " + mysql.escape(req.query.limit) + "," + mysql.escape(req.query.offset) + " ORDER BY id " + newestFirst + " ) AND suspended = 0";
                         sqlAppConnection.query(sql, from_user, function (err, followResults) {
                           if (err) throw err;
-                          sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", for_user_id, function(err, starterUserResults) {
+                          databaseGetters.userFromID(sqlAppConnection, for_user_id, function(err, starterUserResults) {
                             if (err) throw err;
                             if (starterUserResults[0] !== undefined) {
                               var answerObject = {
@@ -493,8 +494,7 @@ if (cluster.isMaster) {
           });
           app.get("/v1/user/:userid", function(req, res) {
             if (req.params.userid !== undefined) {
-              var sql = "SELECT id, username, screen_name, profile_image_url, bio, suspended FROM accounts WHERE id = ?";
-              var getquery = sqlAppConnection.query(sql, req.params.userid, function(err, results) {
+              databaseGetters.userFromID(sqlAppConnection, req.params.userid, function(err, results) {
                 if (err) throw err;
                 if (results[0] == undefined) {
                   return res.json({"error": "USER_ID_NOT_FOUND", "results": null}).end();
@@ -539,7 +539,7 @@ if (cluster.isMaster) {
                               var sql = "INSERT INTO posts SET ?";
                               sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                                 if (err) throw err;
-                                sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", tokenResults[0]["for_user_id"], function(err, userResults) {
+                                databaseGetters.userFromID(sqlAppConnection, tokenResults[0]["for_user_id"], function(err, userResults) {
                                   if (err) throw err;
                                   if (userResults[0] == undefined) {
                                     userResults[0] = {
@@ -652,10 +652,10 @@ if (cluster.isMaster) {
                               sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                                 if (err) throw err;
 
-                                sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHERE id = ? AND suspended = 0", [tokenResults[0]["for_user_id"]], function(err, userResults) {
+                                databaseGetters.userFromID(sqlAppConnection, [tokenResults[0]["for_user_id"]], function(err, userResults) {
                                   if (err) throw err;
 
-                                  sqlAppConnection.query("SELECT username, screen_name, profile_image_url, bio FROM accounts WHRE id = ?", contributionResults[0]["by_user"], function(err, repostedUserResults) {
+                                  databaseGetters.userFromID(sqlAppConnection, contributionResults[0]["by_user"], function(err, repostedUserResults) {
                                   if (err) throw err;
 
                                   if (userResults[0] == undefined) {
