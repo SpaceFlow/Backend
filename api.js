@@ -6,6 +6,7 @@ const numCPUs = require('os').cpus().length;
 var redis = require("redis"),
     redisClient = redis.createClient();
 var realTimeDecayTime = 250;
+var requestPrefix = "v1";
 var databaseGetters = require("./databaseGetters.js");
 function getRealTimeDecayTime(timerInterval) {
   setInterval(function() {
@@ -77,7 +78,7 @@ if (cluster.isMaster) {
               // Pass to next layer of middleware
               next();
           });
-          app.put('/v1/follow/:user', function (req, res) {
+          app.put('/' + requeestPrefix + 'follow/:user', function (req, res) {
               if (req.get("Authorization") !== undefined && req.params.user !== undefined) {
                 if (parseInt(req.params.user) !== NaN) {
                   var authHeader = req.get("Authorization").split(" ");
@@ -184,7 +185,7 @@ if (cluster.isMaster) {
                 
               }
           });
-          app.put('/v1/unfollow/:user', function (req, res) {
+          app.put('/' + requeestPrefix + 'unfollow/:user', function (req, res) {
               if (req.get("Authorization") !== undefined && req.params.user !== undefined) {
                 if (parseInt(req.params.user) !== NaN) {
                   var authHeader = req.get("Authorization").split(" ");
@@ -291,7 +292,7 @@ if (cluster.isMaster) {
                 
               }
           });
-          app.get("/v1/followinfo/:user/followers", function(req, res) {
+          app.get("/" + requeestPrefix + "/followinfo/:user/followers", function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
@@ -368,7 +369,7 @@ if (cluster.isMaster) {
               }
             }
           });
-          app.get("/v1/followinfo/:user/followings", function(req, res) {
+          app.get("/" + requeestPrefix + "/followinfo/:user/followings", function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
@@ -445,7 +446,7 @@ if (cluster.isMaster) {
               }
             }
           });
-          app.post("/v1/userinformation/self/update", function(req, res) {
+          app.post("/" + requeestPrefix + "/userinformation/self/update", function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
@@ -492,7 +493,7 @@ if (cluster.isMaster) {
               }
             }
           });
-          app.get("/v1/user/:userid", function(req, res) {
+          app.get("/" + requeestPrefix + "/user/:userid", function(req, res) {
             if (req.params.userid !== undefined) {
               databaseGetters.userFromID(sqlAppConnection, req.params.userid, function(err, results) {
                 if (err) throw err;
@@ -506,7 +507,7 @@ if (cluster.isMaster) {
               res.status(400).json({"error": "USER_ID_NOT_FOUND", "results": null}).end();
             }
           });
-          app.post('/v1/contribution', function (req, res) {
+          app.post('/' + requeestPrefix + 'contribution', function (req, res) {
               if (req.get("Authorization") !== undefined) {
                 var authHeader = req.get("Authorization").split(" ");
                 if (authHeader[1] !== undefined) {
@@ -611,7 +612,7 @@ if (cluster.isMaster) {
                 }
               }
           });
-          app.put("/v1/contribution/repost/:contribution_id", function(req, res) {
+          app.put("/" + requeestPrefix + "/contribution/repost/:contribution_id", function(req, res) {
                 if (req.get("Authorization") !== undefined) {
                   var authHeader = req.get("Authorization").split(" ");
                   if (authHeader[1] !== undefined) {
@@ -711,7 +712,7 @@ if (cluster.isMaster) {
 
 
 
-          app.get("/v1/contribution/:id", function(req, res) {
+          app.get("/" + requeestPrefix + "/contribution/:id", function(req, res) {
 
             // check params
 
@@ -742,7 +743,7 @@ if (cluster.isMaster) {
             });
 
           })
-          app.get('/v1/contributions/timeline', function(req, res) {
+          app.get('/' + requeestPrefix + 'contributions/timeline', function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
@@ -825,7 +826,7 @@ if (cluster.isMaster) {
               
             }
           )
-          app.get('/v1/contributions/:user', function(req, res) {
+          app.get('/' + requeestPrefix + 'contributions/:user', function(req, res) {
             if (req.get("Authorization") !== undefined) {
               var authHeader = req.get("Authorization").split(" ");
               if (authHeader[1] !== undefined) {
