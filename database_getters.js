@@ -41,5 +41,6 @@ module.exports = {
 	},
 	setRedis: function(ururedis) {
 		redis = ururedis
-	}
+	},
+	contribInformationQuery: "SELECT id, by_user, content, timestamp, mentioned_users, using_app_id, repost, reposts, favs FROM posts WHERE id = ?"
 }

@@ -634,7 +634,7 @@ if (cluster.isMaster) {
 
                             // validate contribution id
                             // request parameters in order to build the streaming response
-                            sqlAppConnection.query("SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0", [req.params.contribution_id], function(err, contributionResults) {
+                            sqlAppConnection.query(databaseGetters.contribInformationQuery, [req.params.contribution_id], function(err, contributionResults) {
 
                               if (err) throw err;
                               if (contributionResults[0] == undefined) {
@@ -642,62 +642,143 @@ if (cluster.isMaster) {
                               }
 
                               // welcome to the SQL hell
-                              var sqlInsetValues = {
-                                by_user: tokenResults[0]["for_user_id"],
-                                content: req.params.contribution_id,
-                                using_app_id: tokenResults[0]["app_id"],
-                                repost: true
-                              };
+                              
                               var sql = "INSERT INTO posts SET ?";
+                              // uh we just reposted a repost - 
+                              if (contibutionResults[0].repost == true) {
+                                // reposted repost! fetch original information, then insert this into the database
+                                sqlAppConnection.query(databaseGetters.contribInformationQuery, contributionResults[0].content, function(err, originalContributionResults) {
+                                  if (err) throw err;
+                                  if (originalContributionResults[0] == undefined) {
+                                    return res.status(404).json({"error": "CONTRIBUTION_NOT_FOUND"}).end();     
+                                  }
 
+                                  var sqlInsetValues = {
+                                    by_user: tokenResults[0]["for_user_id"],
+                                    content: originalContributionResults[0].id,
+                                    using_app_id: tokenResults[0]["app_id"],
+                                    repost: true
+                                  };
+                                  sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
+                                    if (err) throw err;
 
-                              sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
-                                if (err) throw err;
+                                    databaseGetters.userFromID(sqlAppConnection, [tokenResults[0]["for_user_id"]], function(err, userResults) {
+                                      if (err) throw err;
 
-                                databaseGetters.userFromID(sqlAppConnection, [tokenResults[0]["for_user_id"]], function(err, userResults) {
+                                      databaseGetters.userFromID(sqlAppConnection, originalContributionResults[0]["by_user"], function(err, repostedUserResults) {
+                                      if (err) throw err;
+
+                                      if (userResults[0] == undefined) {
+                                        userResults[0] = {
+                                          "username": "unknown",
+                                          "screen_name": "Unknown User",
+                                          "profile_image_url": "",
+                                          "bio": "This user couldn't be found"
+                                        }
+                                      }
+                                      if (repostedUserResults[0] == undefined) {
+                                        repostedUserResults[0] = {
+                                          "username": "unknown",
+                                          "screen_name": "Unknown User",
+                                          "profile_image_url": "",
+                                          "bio": "This user couldn't be found"
+                                        }
+                                      }
+                                      userResults[0]["id"] = tokenResults[0]["for_user_id"];
+                                      // since this contrib was just created there are no stats, so we can just hardcode 0 into this
+                                      var contributionObject = {
+                                        "repost": true,
+                                        "content": originalContributionResults[0].content,
+                                        "mentioned_users": originalContributionResults[0].mentioned_users,
+                                        "using_app": JSON.stringify({
+                                          "id": tokenResults[0]["app_id"], 
+                                          "app_name": applicationResults[0]["app_name"]}),
+                                        "by_user": JSON.stringify(repostedUserResults[0]),
+                                        "repost_by_user": JSON.stringify(userResults[0]),
+                                        "timestamp": originalContributionResults[0]["timestamp"],
+                                        "stats": JSON.stringify({
+                                          "reposts": originalContributionResults[0].reposts,
+                                          "favs": originalContributionResults[0].favs
+                                        }),
+                                        "repost_contribution_id": insertResults.insertId,
+                                        "contribution_id": originalContributionResults[0].id
+                                        "error": null
+                                      }
+                                      redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject);
+                                      redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
+                                      res.status(200);
+                                        res.write(JSON.stringify(contributionObject));
+                                        res.end();
+                                      });
+                                    });
+                                  });
+
+                                });
+                              } else {
+                                // reposted original post
+                                var sqlInsetValues = {
+                                  by_user: tokenResults[0]["for_user_id"],
+                                  content: req.params.contribution_id,
+                                  using_app_id: tokenResults[0]["app_id"],
+                                  repost: true
+                                };
+                                sqlAppConnection.query(sql, sqlInsetValues, function (err, insertResults) {
                                   if (err) throw err;
 
-                                  databaseGetters.userFromID(sqlAppConnection, contributionResults[0]["by_user"], function(err, repostedUserResults) {
-                                  if (err) throw err;
+                                  databaseGetters.userFromID(sqlAppConnection, [tokenResults[0]["for_user_id"]], function(err, userResults) {
+                                    if (err) throw err;
 
-                                  if (userResults[0] == undefined) {
-                                    userResults[0] = {
-                                      "username": "unknown",
-                                      "screen_name": "Unknown User",
-                                      "profile_image_url": "",
-                                      "bio": "This user couldn't be found"
+                                    databaseGetters.userFromID(sqlAppConnection, contributionResults[0]["by_user"], function(err, repostedUserResults) {
+                                    if (err) throw err;
+
+                                    if (userResults[0] == undefined) {
+                                      userResults[0] = {
+                                        "username": "unknown",
+                                        "screen_name": "Unknown User",
+                                        "profile_image_url": "",
+                                        "bio": "This user couldn't be found"
+                                      }
                                     }
-                                  }
-                                  if (repostedUserResults[0] == undefined) {
-                                    repostedUserResults[0] = {
-                                      "username": "unknown",
-                                      "screen_name": "Unknown User",
-                                      "profile_image_url": "",
-                                      "bio": "This user couldn't be found"
+                                    if (repostedUserResults[0] == undefined) {
+                                      repostedUserResults[0] = {
+                                        "username": "unknown",
+                                        "screen_name": "Unknown User",
+                                        "profile_image_url": "",
+                                        "bio": "This user couldn't be found"
+                                      }
                                     }
-                                  }
-                                  userResults[0]["id"] = tokenResults[0]["for_user_id"];
-                                  var contributionObject = {
-                                    "repost": true,
-                                    "content": contributionResults[0].content,
-                                    "mentioned_users": contributionResults[0].mentioned_users,
-                                    "using_app": JSON.stringify({
-                                      "id": tokenResults[0]["app_id"], 
-                                      "app_name": applicationResults[0]["app_name"]}),
-                                    "by_user": JSON.stringify(repostedUserResults[0]),
-                                    "repost_by_user": JSON.stringify(userResults[0]),
-                                    "timestamp": contributionResults[0]["timestamp"],
-                                    "contribution_id": insertResults.insertId,
-                                    "error": null
-                                  }
-                                  redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject);
-                                  redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
-                                  res.status(200);
-                                    res.write(JSON.stringify(contributionObject));
-                                    res.end();
+                                    userResults[0]["id"] = tokenResults[0]["for_user_id"];
+                                    // since this contrib was just created there are no stats, so we can just hardcode 0 into this
+                                    var contributionObject = {
+                                      "repost": true,
+                                      "content": contributionResults[0].content,
+                                      "mentioned_users": contributionResults[0].mentioned_users,
+                                      "using_app": JSON.stringify({
+                                        "id": tokenResults[0]["app_id"], 
+                                        "app_name": applicationResults[0]["app_name"]}),
+                                      "by_user": JSON.stringify(repostedUserResults[0]),
+                                      "repost_by_user": JSON.stringify(userResults[0]),
+                                      "timestamp": contributionResults[0]["timestamp"],
+                                      "stats": JSON.stringify({
+                                        "reposts": contributionResults[0].reposts + 1,
+                                        "favs": contributionResults[0].favs
+                                      }),
+                                      "repost_contribution_id": insertResults.insertId,
+                                      "contribution_id": contributionResults[0].id
+                                      "error": null
+                                    }
+                                    redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject);
+                                    redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
+                                    res.status(200);
+                                      res.write(JSON.stringify(contributionObject));
+                                      res.end();
+                                    });
+                                    sqlAppConnection.query("UPDATE posts SET reposts = reposts + 1 WHERE id = ?", contributionResults[0].id);
                                   });
                                 });
-                              });
+                              }
+
+                              
                             });
                           }
                         }
@@ -725,7 +806,7 @@ if (cluster.isMaster) {
             }
 
             // sql query
-            var sql = "SELECT by_user, content, timestamp, mentioned_users, using_app_id FROM posts WHERE id = ? AND repost = 0";
+            var sql = databaseGetters.contribInformationQuery;
             sqlAppConnection.query(sql, req.params.id, function(err, results) {
               if (err) throw err;
 
@@ -734,12 +815,30 @@ if (cluster.isMaster) {
               if (results[0] == undefined) {
                   return res.status(404).json({"error": "CONTRIBUTION_NOT_FOUND", "contribution": null}).end();
               }
-              // wow, build up the object and send it!
-              results[0]["id"] = parseInt(req.params.id);
-              res.status(200).json({
-                "error": null,
-                "status": results[0]
-              }).end();
+              if (results[0].repost == true) {
+                sqlAppConnection.query(sql, results[0].content, function (err, repostQueryResults) {
+                  if (err) throw err;
+                  if (repostsQueryResults[0] == undefined) {
+                    return res.status(404).json({"error": "CONTRIBUTION_NOT_FOUND", "contribution": null}).end();
+                  }
+                  // wow, build up the object and send it!
+
+                  results[0]["id"] = parseInt(req.params.id);
+                  repostQueryResults[0].repost_information = results[0];
+                  res.status(200).json({
+                    "error": null,
+                    "status": repostQueryResults[0]
+                  }).end();
+
+                })
+              } else {
+                // wow, build up the object and send it!
+                results[0]["id"] = parseInt(req.params.id);
+                res.status(200).json({
+                  "error": null,
+                  "status": results[0]
+                }).end();
+              }
 
             });
 
