@@ -697,13 +697,15 @@ if (cluster.isMaster) {
                                         "repost_by_user": JSON.stringify(userResults[0]),
                                         "timestamp": originalContributionResults[0]["timestamp"],
                                         "stats": JSON.stringify({
-                                          "reposts": originalContributionResults[0].reposts,
+                                          "reposts": originalContributionResults[0].reposts + 1,
                                           "favs": originalContributionResults[0].favs
                                         }),
                                         "repost_contribution_id": insertResults.insertId,
                                         "contribution_id": originalContributionResults[0].id
                                         "error": null
                                       }
+                                      // update repost count
+                                      sqlAppConnection.query("UPDATE posts SET reposts = reposts + 1 WHERE id = ? OR id = ?", [originalContributionResults[0].id, insertResults.insertId]);
                                       redisClient.hmset("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], contributionObject);
                                       redisClient.expire("cont-" + insertResults.insertId + "-" + tokenResults[0]["for_user_id"], realTimeDecayTime);
                                       res.status(200);
@@ -773,6 +775,7 @@ if (cluster.isMaster) {
                                       res.write(JSON.stringify(contributionObject));
                                       res.end();
                                     });
+                                    // update repost count
                                     sqlAppConnection.query("UPDATE posts SET reposts = reposts + 1 WHERE id = ?", contributionResults[0].id);
                                   });
                                 });
